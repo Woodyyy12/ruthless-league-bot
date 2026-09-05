@@ -683,7 +683,7 @@ async def ant(ctx):
 # ==========================================
 # RP KOMUTU 3: .penaltı
 # ==========================================
-@bot.command(name="penaltı")
+@bot.command(name="penaltı", aliases=["penalti"])
 async def penalti(ctx):
     user_id = str(ctx.author.id)
     p = oyuncu_kontrol(user_id)
@@ -692,37 +692,76 @@ async def penalti(ctx):
         await ctx.send("❌ Önce bir yetkilinin seni `.k` komutuyla kaydetmesi gerekiyor!")
         return
 
-    senaryolar = ["GOL", "KURTARIŞ", "DİREK", "DIŞARI"]
-    sonuc = random.choices(senaryolar, weights=[3, 1, 1, 1], k=1)[0]
+    simdi = datetime.now()
+    son_penalti = p.get("son_penalti_zamani")
+    if son_penalti:
+        try:
+            son_kullanim = datetime.strptime(son_penalti, "%Y-%m-%d %H:%M:%S")
+            kalan_sure = son_kullanim + timedelta(hours=1) - simdi
+            if kalan_sure.total_seconds() > 0:
+                dakika = max(1, int((kalan_sure.total_seconds() + 59) // 60))
+                cooldown_embed = discord.Embed(
+                    color=discord.Color.from_rgb(0, 0, 0),
+                    description=(
+                        f"<a:saat:1545088358353731705> Penaltı hakkın henüz yenilenmedi.\n\n"
+                        f"Yeni hakkını **{dakika} dakika** sonra kullanabilirsin."
+                    ),
+                )
+                await ctx.send(embed=cooldown_embed)
+                return
+        except ValueError:
+            p.pop("son_penalti_zamani", None)
 
-    embed = discord.Embed(color=discord.Color.from_rgb(46, 204, 113))
-    embed.set_author(name=f"🏆 RUTHLESS LEAGUE • Penaltı Arenası", icon_url=ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url)
-    embed.set_thumbnail(url=ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url)
+    senaryolar = [
+        {
+            "mesaj": (
+                "<:penalti:1545845312306942002> PENALTI GOOOOLLLL"
+                "<a:peepoclap:1544858466752008263>\n\n"
+                "<a:BTFS_ZirveElmas:1544843346479161424> Değer Kazancı 2M\n\n"
+                "<a:saat:1545088358353731705> Sonraki Hakkın 1 Saat Sonra."
+            ),
+            "gol": True,
+        },
+        {
+            "mesaj": (
+                "<:penaltikacti:1544828350969942107> VURUŞŞ AUT "
+                "<:emoji_130:1545847240357060731>\n\n"
+                "<:popeyes62:1544843272705540246> Değer Kazancı 0\n\n"
+                "<a:saat:1545088358353731705> Üzülme 1 Saat Sonra Yeniden Kullanabilirsin."
+            ),
+            "gol": False,
+        },
+        {
+            "mesaj": (
+                "<:penalti:1545845309945421854> VEEE DİREEKK "
+                "<:baggio:1545846769353629706>\n\n"
+                "<:popeyes62:1544843272705540246> Değer Kazancı 0\n\n"
+                "<a:saat:1545088358353731705> Ayakta Kalmanın Manası Yok 1 Saat Sonra Yeniden Burada Olacaksın."
+            ),
+            "gol": False,
+        },
+        {
+            "mesaj": (
+                "<:penaltikacti:1544828350969942107> GÜÇSÜZ BİR VURUŞ VE KALECİ "
+                "<:kurtaris:1545849244173344798>\n\n"
+                "<:popeyes62:1544843272705540246> Değer Kazancı 0\n\n"
+                "<a:saat:1545088358353731705> 1 Saat İçinde O Şişeyi İmha Edip Geri Gel."
+            ),
+            "gol": False,
+        },
+    ]
+    sonuc = random.choice(senaryolar)
 
-    anlatim = f"🏃‍♂️ **{p['isim']}** penaltı kullanıyor...\n\n🏟️ **{ctx.author.name}** topun başına geçti.\n🔊 Hakem düdüğü çaldı.\n🥅 Vuruş geldi...\n\n"
+    if sonuc["gol"]:
+        p["penalti_golu"] = p.get("penalti_golu", 0) + 1
+        p["para"] = p.get("para", 0) + 2
 
-    if sonuc == "GOL":
-        p["penalti_golu"] += 1
-        p["para"] += 3
-        embed.title = "⚽ GOOOOOOL! 🏃‍♂️"
-        anlatim += f"**Sonuç:** Top ağlarla buluştu! Müthiş bir vuruş.\n🏅 **Stat Kazancı:** +1 Penaltı Golü\n💰 **Para Kazancı:** +3 M€\n📊 *Toplam Penaltı Golün:* **{p['penalti_golu']}**"
-        embed.color = discord.Color.green()
-    elif sonuc == "KURTARIŞ":
-        embed.title = "🧤 KALECİ KURTARDI! 🧱"
-        anlatim += f"**Sonuç:** Kaleci köşeyi doğru tahmin etti ve topu çeldi!\n❌ **Stat Kazancı:** Yok"
-        embed.color = discord.Color.red()
-    elif sonuc == "DİREK":
-        embed.title = "💥 DİREKTEN DÖNDÜ! 🥅"
-        anlatim += f"**Sonuç:** Kaleci çaresiz kaldı ama top çat diye direğe çarpıp döndü!\n❌ **Stat Kazancı:** Yok"
-        embed.color = discord.Color.orange()
-    elif sonuc == "DIŞARI":
-        embed.title = "😱 DIŞARI GİTTİ! 💨"
-        anlatim += f"**Sonuç:** Oyuncu çok sert vurdu ama top üstten auta çıktı.\n❌ **Stat Kazancı:** Yok"
-        embed.color = discord.Color.light_grey()
-
+    p["son_penalti_zamani"] = simdi.strftime("%Y-%m-%d %H:%M:%S")
     verileri_kaydet(oyuncular)
-    embed.description = anlatim
-    embed.set_footer(text=f"⚽ Ruthless League • Maç Saati: {datetime.now().strftime('%H:%M')}")
+    embed = discord.Embed(
+        color=discord.Color.from_rgb(0, 0, 0),
+        description=sonuc["mesaj"],
+    )
     await ctx.send(embed=embed)
 
 # ==========================================
