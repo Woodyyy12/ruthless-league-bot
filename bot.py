@@ -167,6 +167,9 @@ async def on_member_join(member: discord.Member):
 async def on_message(message):
     if message.author.bot:
         return
+    if message.content.strip().casefold() in {".penaltı", ".penalti"}:
+        await penalti(await bot.get_context(message))
+        return
     if message.content.strip().lower() == "sa":
         await message.reply("Aleyküm Selam Dostum Günün İyi Geçiyormu #🎽︱antrenman Yapmayı Unutma!")
     await bot.process_commands(message)
